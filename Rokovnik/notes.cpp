@@ -71,4 +71,17 @@ const std::vector<Note>& Notes::getAllNotes() const {
 	return notes;
 }
 
+std::vector<Note> Notes::getAllNotesForDate(const std::tm& date) const {
+	std::vector<Note> noteV;
+	for (const Note& n : notes) {
+		if (n.date.tm_year == date.tm_year &&
+			n.date.tm_mday == date.tm_mday &&
+			n.date.tm_mon == date.tm_mon) {
+			noteV.push_back(n);
+		}
+	}
+	return noteV;
+	
+}
+
 	
