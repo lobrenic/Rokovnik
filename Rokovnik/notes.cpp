@@ -2,6 +2,10 @@
 #include <fstream>
 #include <string>
 #include <iomanip>
+#include <vector>
+#include <iostream>
+#include <sstream>
+
 void Notes::addNote(const Note& note) {
 	Note n = note;
 	n.id = generateId();
@@ -30,5 +34,39 @@ void Notes::save()const {
 	File.close();
 }
 
-Notes::Notes(const std::string& filename) : filename(filename) {}
+Notes::Notes(const std::string& filename) : filename(filename) {
+	load();
+}
 
+void Notes::load() {
+	notes.clear();
+	std::ifstream File(filename);
+	std::string line;
+	while (std::getline(File, line)) {
+		Note newNote{};
+		auto p1 = line.find('$');
+		auto p2 = line.find('$', p1 + 1);
+		if (p1 == std::string::npos || p2 == std::string::npos)continue;
+		
+		try {
+			newNote.id = std::stoi(line.substr(0, p1));
+		}
+		catch (...) {
+			continue;
+		}
+
+		
+		std::string dateStr= line.substr(p1 + 1, p2 - p1-1);
+		newNote.text = line.substr(p2 + 1);
+		std::istringstream ss(dateStr);
+		ss >> std::get_time(&newNote.date, "%d.%m.%Y");
+		if (ss.fail()) continue;
+		notes.push_back(newNote);
+	}
+
+
+}
+
+
+
+	

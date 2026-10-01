@@ -14,6 +14,7 @@ int main() {
 		system("cls");
 		cout << "\n===== ROKOVNIK =====\n";
 		cout << "1. Dodaj belesku\n";
+		cout << "2. Prikazi sve beleske\n";
 		cout << "0. Izlaz\n";
 		cout << "====================\n";
 		cout << "Vas izbor: ";
@@ -43,7 +44,10 @@ int main() {
 			n.addNote(newNote);
 			break;
 		}
-
+		case 2:
+			system("cls");
+			
+			break;
 		default:
 			break;
 		}
