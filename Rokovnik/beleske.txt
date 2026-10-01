@@ -1,3 +1,4 @@
 1$11.11.2026$Test beleske
 2$12.11.2026$nova beleska
 3$11.11.2026$kopija da proverimo funkcionalnost 3
+4$05.05.2026$test datum parsera

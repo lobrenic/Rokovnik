@@ -5,9 +5,13 @@
 #include <cstdlib>
 #include <vector>
 #include <iomanip>
+#include <sstream>
 using namespace std;
 
 string filename="beleske.txt";
+
+void listNotes(const vector<Note>& notes);
+bool parseDate(const string& s, tm& out);
 int main() {
 	Notes n(filename);
 	int choice;
@@ -18,6 +22,7 @@ int main() {
 		cout << "1. Dodaj belesku\n";
 		cout << "2. Prikazi sve beleske\n";
 		cout << "3. Prikazi beleske po datumu\n";
+		cout << "4. Obrisi belesku po id\n";
 		cout << "0. Izlaz\n";
 		cout << "====================\n";
 		cout << "Vas izbor: ";
@@ -34,14 +39,17 @@ int main() {
 			system("cls");
 			cout << "\nUnesite datum u formatu dd.mm.YYYY: ";
 			cin >> dateStr;
-			int day = stoi(dateStr.substr(0, 2));
-			int month = stoi(dateStr.substr(3, 2));
-			int year = stoi(dateStr.substr(6, 4));
-			newNote.date.tm_year = year - 1900;
-			newNote.date.tm_mon = month - 1;
-			newNote.date.tm_mday = day;
+			
+			tm date{};
+			if (!parseDate(dateStr, date)) {
+				cout << "\nNeispravan datum, pritisnite enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
 			cout << "\nUnesite belesku: ";
 			cin.ignore();
+			newNote.date = date;
 			getline(cin, newNote.text);
 			n.addNote(newNote);
 			cout << "\nBeleska uspesno dodata, pritisnite enter: ";
@@ -51,10 +59,7 @@ int main() {
 		case 2: {
 			system("cls");
 			vector<Note> notes = n.getAllNotes();
-			cout << "\n===== Lista beleski =====\n";
-			for (Note note : notes)
-				cout << '[' << note.id << "] " << note.text << "\t" << put_time(&note.date, "%d.%m.%Y") << endl;
-			cout << "\n=========================\n";
+			listNotes(notes);
 			cout << "Press enter: ";
 			cin.ignore();
 			cin.get();
@@ -65,19 +70,43 @@ int main() {
 			string critDate;
 			cout << "\nUnesite datum u formatu dd.mm.YYYY: ";
 			cin >> critDate;
-			int day = stoi(critDate.substr(0, 2));
-			int month = stoi(critDate.substr(3, 2));
-			int year = stoi(critDate.substr(6, 4));
+			
 			tm date{};
-			date.tm_year = year - 1900;
-			date.tm_mon = month - 1;
-			date.tm_mday = day;
+			if (!parseDate(critDate, date)) {
+				cout << "\nNeispravan datum, pritisnite enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
 			vector<Note> critNotes = n.getAllNotesForDate(date);
-			cout << "\n===== Lista beleski =====\n";
-			for (Note note : critNotes)
-				cout << '[' << note.id << "] " << note.text << "\t" << put_time(&note.date, "%d.%m.%Y") << endl;
-			cout << "\n=========================\n";
+			listNotes(critNotes);
 			cout << "Press enter: ";
+			cin.ignore();
+			cin.get();
+			break;
+		}
+		case 4: {
+			system("cls");
+			vector<Note> notes = n.getAllNotes();
+			listNotes(notes);
+			string idStr;
+			cout << "\nUnesite id beleske koju zelite da izbrisete: ";
+			int id=-1;
+			cin >> idStr;
+			try {
+				id = stoi(idStr);
+			}
+			catch (...) {
+				cout << "\nNiste uneli broj, pritisnite enter da se vratite u meni: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			bool uspeh = n.removeNote(id);
+			if (uspeh) 
+				cout << "\nUspesno je uklonjena beleska, pritisnite enter da se vratite u meni: ";
+			else
+				cout << "Doslo je do greske, pritisnite enter da se vratite u meni: ";
 			cin.ignore();
 			cin.get();
 			break;
@@ -87,4 +116,17 @@ int main() {
 		}
 	} while (choice!=0);
 	
+}
+
+void listNotes(const vector<Note>& notes) {
+	cout << "\n===== Lista beleski =====\n";
+	for (const Note& note : notes)
+		cout << '[' << note.id << "] " << note.text << "\t" << put_time(&note.date, "%d.%m.%Y") << endl;
+	cout << "\n=========================\n";
+}
+
+bool parseDate(const string& s, tm& out) {
+	istringstream ss(s);
+	ss >> get_time(&out, "%d.%m.%Y");
+	return !ss.fail();
 }

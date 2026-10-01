@@ -83,5 +83,14 @@ std::vector<Note> Notes::getAllNotesForDate(const std::tm& date) const {
 	return noteV;
 	
 }
-
+bool Notes::removeNote(int id) {
+	for (auto it = notes.begin(); it != notes.end(); it++) {
+		if (it->id == id) {
+			notes.erase(it);
+			save();
+			return true;
+		}
+	}
+	return false;
+}
 	
