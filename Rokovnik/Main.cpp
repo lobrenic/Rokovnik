@@ -3,6 +3,8 @@
 #include <string>
 #include <ctime>
 #include <cstdlib>
+#include <vector>
+#include <iomanip>
 using namespace std;
 
 string filename="beleske.txt";
@@ -37,17 +39,27 @@ int main() {
 			newNote.date.tm_year = year - 1900;
 			newNote.date.tm_mon = month - 1;
 			newNote.date.tm_mday = day;
-			system("cls");
-			cout << "Unesite belesku: ";
+			cout << "\nUnesite belesku: ";
 			cin.ignore();
 			getline(cin, newNote.text);
 			n.addNote(newNote);
+			cout << "\nBeleska uspesno dodata, pritisnite enter: ";
+			cin.get();
 			break;
 		}
-		case 2:
+		case 2: {
 			system("cls");
-			
+			vector<Note> notes = n.getAllNotes();
+			cout << "\n===== Lista beleski =====\n";
+			for (Note note : notes)
+				cout << '[' << note.id << "] " << note.text << "\t" << put_time(&note.date, "%d.%m.%Y") << endl;
+			cout << "\n=========================\n";
+			cout << "Press enter: ";
+			cin.ignore();
+			cin.get();
 			break;
+		}
+			
 		default:
 			break;
 		}

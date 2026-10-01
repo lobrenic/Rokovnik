@@ -67,6 +67,8 @@ void Notes::load() {
 
 }
 
-
+const std::vector<Note>& Notes::getAllNotes() const {
+	return notes;
+}
 
 	
