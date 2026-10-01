@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Rokovnik/Rokovnik.vcxproj" Id="df89d663-eaa6-4ecb-b61c-b2c4e6d99424" />
+</Solution>
