@@ -6,12 +6,14 @@
 #include <vector>
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
 using namespace std;
 
-string filename="beleske.txt";
+const string filename="beleske.txt";
 
 void listNotes(const vector<Note>& notes);
 bool parseDate(const string& s, tm& out);
+int readInt();
 int main() {
 	Notes n(filename);
 	int choice;
@@ -23,10 +25,16 @@ int main() {
 		cout << "2. Prikazi sve beleske\n";
 		cout << "3. Prikazi beleske po datumu\n";
 		cout << "4. Obrisi belesku po id\n";
+		cout << "5. Izmeni belesku\n";
 		cout << "0. Izlaz\n";
 		cout << "====================\n";
 		cout << "Vas izbor: ";
-		cin >> choice;
+		try {
+			choice = readInt();
+		}
+		catch (const exception&) {
+			choice = -1;   
+		}
 		if (choice == 0) {
 			return 0;
 		}
@@ -59,6 +67,12 @@ int main() {
 		case 2: {
 			system("cls");
 			vector<Note> notes = n.getAllNotes();
+			if (notes.empty()) {
+				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}	
 			listNotes(notes);
 			cout << "Press enter: ";
 			cin.ignore();
@@ -79,6 +93,12 @@ int main() {
 				break;
 			}
 			vector<Note> critNotes = n.getAllNotesForDate(date);
+			if (critNotes.empty()) {
+				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
 			listNotes(critNotes);
 			cout << "Press enter: ";
 			cin.ignore();
@@ -88,26 +108,77 @@ int main() {
 		case 4: {
 			system("cls");
 			vector<Note> notes = n.getAllNotes();
+			if (notes.empty()) {
+				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
 			listNotes(notes);
 			string idStr;
 			cout << "\nUnesite id beleske koju zelite da izbrisete: ";
-			int id=-1;
-			cin >> idStr;
+			int id;
 			try {
-				id = stoi(idStr);
+				id = readInt();
 			}
-			catch (...) {
+			catch (const exception&) {
 				cout << "\nNiste uneli broj, pritisnite enter da se vratite u meni: ";
 				cin.ignore();
 				cin.get();
 				break;
 			}
+			if (id == 0) break;
 			bool uspeh = n.removeNote(id);
 			if (uspeh) 
 				cout << "\nUspesno je uklonjena beleska, pritisnite enter da se vratite u meni: ";
 			else
-				cout << "Doslo je do greske, pritisnite enter da se vratite u meni: ";
+				cout << "\nDoslo je do greske, pritisnite enter da se vratite u meni: ";
 			cin.ignore();
+			cin.get();
+			break;
+		}
+		case 5: {
+			system("cls");
+			listNotes(n.getAllNotes());
+			cout << "\nUnesite id da bi izabrali belesku za izmenu(ili 0 za povratak): ";
+			string idStr;
+			int id;
+			try {
+				id = readInt();
+			}
+			catch (const exception&) {
+				cout << "\nNiste uneli broj, pritisnite enter da se vratite u meni: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			if (id == 0) break;
+			
+			string newText;
+			string newDateStr;
+			tm newDate{};
+			cout << "\nUnesite novi datum u formatu dd.mm.YYYY: ";
+			cin >> newDateStr;
+			if (!parseDate(newDateStr, newDate)) {
+				cout << "\nNeispravan datum, pritisnite enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			cout << "\nUnesite novi tekst: ";
+			cin.ignore();
+			
+			getline(cin,newText);
+			
+			
+			try {
+				n.editNote(id, newDate, newText);
+				cout << "\nBeleska uspesno izmenjena, pritisnite enter: ";
+			}
+			catch (const exception& e) {
+				cout << "\nGreska, " << e.what() << ", pritisnite enter: ";
+			}
+			
 			cin.get();
 			break;
 		}
@@ -128,5 +199,22 @@ void listNotes(const vector<Note>& notes) {
 bool parseDate(const string& s, tm& out) {
 	istringstream ss(s);
 	ss >> get_time(&out, "%d.%m.%Y");
-	return !ss.fail();
+	if (ss.fail())
+		return false;
+	tm copy = out;
+	mktime(&copy);
+	return copy.tm_mday == out.tm_mday
+		&& copy.tm_year == out.tm_year
+		&& copy.tm_mon == out.tm_mon;
+	
+}
+
+int readInt() {
+	string s;
+	cin >> s;
+	size_t pos;
+	int value = stoi(s, &pos);
+	if (pos != s.size())
+		throw invalid_argument("Unos nije ceo broj");  
+	return value;
 }

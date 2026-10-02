@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
-
+#include <stdexcept>
 void Notes::addNote(const Note& note) {
 	Note n = note;
 	n.id = generateId();
@@ -93,4 +93,15 @@ bool Notes::removeNote(int id) {
 	}
 	return false;
 }
+void Notes::editNote(int id, const std::tm& newDate, const std::string& newText) {
 	
+	for (Note& n : notes) {
+		if (n.id == id) {
+			n.text = newText;
+			n.date = newDate;
+			save();
+			return;
+		}
+	}
+	throw std::out_of_range("Beleska ne postoji");
+}
