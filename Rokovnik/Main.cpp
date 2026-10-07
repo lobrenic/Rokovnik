@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include "notes.h"
 #include <string>
@@ -7,6 +8,7 @@
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
+#include <algorithm>
 using namespace std;
 
 const string filename="beleske.txt";
@@ -14,6 +16,10 @@ const string filename="beleske.txt";
 void listNotes(const vector<Note>& notes);
 bool parseDate(const string& s, tm& out);
 int readInt();
+bool isPast(const tm& date);
+vector<Note> sortedByDate(const vector<Note>& notes);
+int daysUntil(const tm& date);
+void formatDaysUntil(string& str, const tm& date);
 int main() {
 	Notes n(filename);
 	int choice;
@@ -45,12 +51,19 @@ int main() {
 			newNote.id = -1;
 			string dateStr;
 			system("cls");
+			cin.ignore();
 			cout << "\nUnesite datum u formatu dd.mm.YYYY: ";
 			cin >> dateStr;
-			
 			tm date{};
+			cin.ignore();
 			if (!parseDate(dateStr, date)) {
 				cout << "\nNeispravan datum, pritisnite enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			if (isPast(date)) {
+				cout << "\nDatum je u proslosti, pritisnite enter: ";
 				cin.ignore();
 				cin.get();
 				break;
@@ -165,6 +178,12 @@ int main() {
 				cin.get();
 				break;
 			}
+			if (isPast(newDate)) {
+				cout << "\nDatum je u proslosti, pritisnite enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
 			cout << "\nUnesite novi tekst: ";
 			cin.ignore();
 			
@@ -188,11 +207,77 @@ int main() {
 	} while (choice!=0);
 	
 }
+int daysUntil(const tm& date) {
+	tm target = date;
+	target.tm_hour = 12;
+	target.tm_min = 0;
+	target.tm_sec = 0;
+	target.tm_isdst = -1;
 
+	time_t now = time(nullptr);
+	tm today = *localtime(&now);
+	today.tm_hour = 12;
+	today.tm_min = 0;
+	today.tm_sec = 0;
+	today.tm_isdst = -1;
+
+	double diff = difftime(mktime(&target), mktime(&today));
+	return (int)round(diff / (60 * 60 * 24));
+}
+void formatDaysUntil(string& str,const tm& date) {
+	int days = daysUntil(date);
+	int years, mons, daysM;
+	if (days < 0) {
+		str = "Passed";
+		return;
+	}
+	switch (days) {
+	case 0:
+		str = "Today";
+		break;
+	case 1:
+		str = "Tomorrow";
+		break;
+	default: {
+		years = days / 365;
+		mons = (days % 365) / 30;
+		daysM = days % 365 % 30; 
+		str = "Time until: ";
+		string parts;
+		if (years) 
+			parts += to_string(years) + (years == 1 ? " year" : " years");
+		if (mons) {
+			if (!parts.empty()) parts += ", ";
+			parts += to_string(mons) + (mons == 1 ? " month" : " months");
+		}
+		if (daysM) {
+			if (!parts.empty()) parts += ", ";
+			parts += to_string(daysM) + (daysM == 1 ? " day" : " days");
+		}
+		str += parts;
+		break;
+	}
+	}
+}
+
+bool isPast(const tm& date) {
+	time_t timestamp = time(nullptr);
+	tm today = *localtime(&timestamp);
+	if (date.tm_year != today.tm_year)
+		return date.tm_year < today.tm_year;
+	if (date.tm_mon != today.tm_mon)
+		return date.tm_mon < today.tm_mon;
+	return date.tm_mday < today.tm_mday;
+	
+}
 void listNotes(const vector<Note>& notes) {
 	cout << "\n===== Lista beleski =====\n";
-	for (const Note& note : notes)
-		cout << '[' << note.id << "] " << note.text << "\t" << put_time(&note.date, "%d.%m.%Y") << endl;
+	vector<Note> copy = sortedByDate(notes);
+	string until;
+	for (const Note& note : copy){
+		formatDaysUntil(until, note.date);
+		cout << '[' << note.id << "] " << note.text << "\t" << put_time(&note.date, "%d.%m.%Y") << "\t" << until << endl;
+	}
 	cout << "\n=========================\n";
 }
 
@@ -208,7 +293,17 @@ bool parseDate(const string& s, tm& out) {
 		&& copy.tm_mon == out.tm_mon;
 	
 }
-
+vector<Note> sortedByDate(const vector<Note>& notes) {
+	vector<Note> copy = notes;
+	stable_sort(copy.begin(), copy.end(), [](const Note& a, const Note& b) {
+		if (a.date.tm_year != b.date.tm_year)
+			return a.date.tm_year < b.date.tm_year;
+		if (a.date.tm_mon != b.date.tm_mon)
+			return a.date.tm_mon < b.date.tm_mon;
+		return a.date.tm_mday < b.date.tm_mday;
+		});
+	return copy;
+}
 int readInt() {
 	string s;
 	cin >> s;

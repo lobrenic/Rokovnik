@@ -2,3 +2,4 @@
 2$12.11.2026$nova beleska
 3$05.06.2027$Proveravamo update operaciju
 4$05.05.2026$test datum parsera
+5$11.05.2029$est until funkcionalnosti
