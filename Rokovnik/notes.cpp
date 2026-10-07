@@ -29,7 +29,7 @@ void Notes::save()const {
 	std::ofstream File(filename);
 	for (const Note& n : notes) {
 		File << n.id << '$' <<
-			std::put_time(&n.date,"%d.%m.%Y") << "$" <<
+			std::put_time(&n.date,"%d.%m.%Y") << '$' <<typeToChar(n.type)<<'$'<<
 			n.text << std::endl;
 
 	}
@@ -48,7 +48,8 @@ void Notes::load() {
 		Note newNote{};
 		auto p1 = line.find('$');
 		auto p2 = line.find('$', p1 + 1);
-		if (p1 == std::string::npos || p2 == std::string::npos)continue;
+		auto p3 = line.find('$', p2 + 1);
+		if (p1 == std::string::npos || p2 == std::string::npos ||p3==std::string::npos)continue;
 		
 		try {
 			newNote.id = std::stoi(line.substr(0, p1));
@@ -59,7 +60,10 @@ void Notes::load() {
 
 		
 		std::string dateStr= line.substr(p1 + 1, p2 - p1-1);
-		newNote.text = line.substr(p2 + 1);
+		std::string typeStr = line.substr(p2 + 1, p3 - p2 - 1);
+		if (!typeStr.empty())
+			newNote.type = charToType(typeStr[0]);
+		newNote.text = line.substr(p3+1);
 		std::istringstream ss(dateStr);
 		ss >> std::get_time(&newNote.date, "%d.%m.%Y");
 		if (ss.fail()) continue;
@@ -95,12 +99,13 @@ bool Notes::removeNote(int id) {
 	}
 	return false;
 }
-void Notes::editNote(int id, const std::tm& newDate, const std::string& newText) {
+void Notes::editNote(int id, const std::tm& newDate,NoteType newType,const std::string& newText) {
 	
 	for (Note& n : notes) {
 		if (n.id == id) {
 			n.text = newText;
 			n.date = newDate;
+			n.type = newType;
 			save();
 			return;
 		}
@@ -126,4 +131,14 @@ bool Notes::isPast(const std::tm& date) const{
 		return date.tm_mon < today.tm_mon;
 	return date.tm_mday < today.tm_mday;
 
+}
+
+std::vector<Note> Notes::getAllExams() const {
+	std::vector<Note> temp=getUpcomingNotes();
+	std::vector<Note> exams;
+	for (const Note& n : temp) {
+		if (n.type == NoteType::Exam)
+			exams.push_back(n);
+	}
+	return exams;
 }

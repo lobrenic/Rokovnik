@@ -9,6 +9,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
+#include <cmath>
 using namespace std;
 
 const string filename="beleske.txt";
@@ -27,10 +28,11 @@ int main() {
 		system("cls");
 		cout << "\n===== ROKOVNIK =====\n";
 		cout << "1. Dodaj belesku\n";
-		cout << "2. Prikazi sve beleske\n";
+		cout << "2. Prikazi predstojece beleske\n";
 		cout << "3. Prikazi beleske po datumu\n";
 		cout << "4. Obrisi belesku po id\n";
 		cout << "5. Izmeni belesku\n";
+		cout << "6. Prikazi sve ispite\n";
 		cout << "0. Izlaz\n";
 		cout << "====================\n";
 		cout << "Vas izbor: ";
@@ -40,21 +42,16 @@ int main() {
 		catch (const exception&) {
 			choice = -1;   
 		}
-		if (choice == 0) {
-			return 0;
-		}
 		switch (choice)
 		{
 		case 1: {
 			Note newNote;
-			newNote.id = -1;
 			string dateStr;
 			system("cls");
 			cin.ignore();
 			cout << "\nUnesite datum u formatu dd.mm.YYYY: ";
 			cin >> dateStr;
 			tm date{};
-			cin.ignore();
 			if (!parseDate(dateStr, date)) {
 				cout << "\nNeispravan datum, pritisnite enter: ";
 				cin.ignore();
@@ -67,6 +64,18 @@ int main() {
 				cin.get();
 				break;
 			}
+			cout << "\nDa li je ispit? (d/n): ";
+			char isExam;
+			cin >> isExam;
+			if (isExam != 'd' && isExam != 'n') {
+				cout << "\nNeispravan unos, pritisnite enter za povratak na meni: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			if (isExam == 'd')
+				newNote.type = NoteType::Exam;
+			cin.ignore();
 			cout << "\nUnesite belesku: ";
 			newNote.date = date;
 			getline(cin, newNote.text);
@@ -124,7 +133,7 @@ int main() {
 		}
 		case 4: {
 			system("cls");
-			vector<Note> notes = n.getUpcomingNotes();
+			vector<Note> notes = n.getAllNotes();
 			if (notes.empty()) {
 				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
 				cin.ignore();
@@ -132,7 +141,6 @@ int main() {
 				break;
 			}
 			listNotes(notes);
-			string idStr;
 			cout << "\nUnesite id beleske koju zelite da izbrisete: ";
 			int id;
 			try {
@@ -156,9 +164,16 @@ int main() {
 		}
 		case 5: {
 			system("cls");
-			listNotes(n.getUpcomingNotes());
+			vector<Note> notes = n.getAllNotes();
+			if (notes.empty()) {
+				cout << "\nNema beleski";
+				cout << "\nPress enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			listNotes(notes);
 			cout << "\nUnesite id da bi izabrali belesku za izmenu(ili 0 za povratak): ";
-			string idStr;
 			int id;
 			try {
 				id = readInt();
@@ -188,14 +203,24 @@ int main() {
 				cin.get();
 				break;
 			}
+			cout << "\nDa li je ispit? (d/n): ";
+			char isExam;
+			NoteType type=NoteType::Note;
+			cin >> isExam;
+			if (isExam != 'd' && isExam != 'n') {
+				cout << "\nNeispravan unos, pritisnite enter za povratak na meni: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			if (isExam == 'd')type = NoteType::Exam;
+			
 			cout << "\nUnesite novi tekst: ";
 			cin.ignore();
-			
 			getline(cin,newText);
 			
-			
 			try {
-				n.editNote(id, newDate, newText);
+				n.editNote(id, newDate, type,newText);
 				cout << "\nBeleska uspesno izmenjena, pritisnite enter: ";
 			}
 			catch (const exception& e) {
@@ -205,6 +230,23 @@ int main() {
 			cin.get();
 			break;
 		}
+		case 6: {
+			system("cls");
+			vector<Note> exams = n.getAllExams();
+			if (exams.empty()) {
+				cout << "\nNema predstojecih ispita";
+				cout << "\nPress enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			listNotes(exams);
+			cout << "Press enter: ";
+			cin.ignore();
+			cin.get();
+			break;
+		}
+			
 		default:
 			break;
 		}
@@ -271,7 +313,11 @@ void listNotes(const vector<Note>& notes) {
 	string until;
 	for (const Note& note : copy){
 		formatDaysUntil(until, note.date);
-		cout << '[' << note.id << "] " << note.text << "\t" << put_time(&note.date, "%d.%m.%Y") << "\t" << until << endl;
+		cout << '[' << note.id << "] " <<
+			note.text << "\t" <<
+			put_time(&note.date, "%d.%m.%Y") << "\t" <<
+			until << "\t" <<
+			"[" << typeToChar(note.type) << "]" << endl;
 	}
 	cout << "\n=========================\n";
 }

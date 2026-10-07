@@ -2,11 +2,13 @@
 #include <ctime>
 #include <string>
 #include <vector>
+#include "noteType.h"
 
 struct Note {
 	int id=-1;
 	std::tm date{};
 	std::string text;
+	NoteType type = NoteType::Note;
 };
 
 class Notes {
@@ -23,7 +25,8 @@ public:
 	std::vector<Note> getAllNotesForDate(const std::tm& date) const;
 	void addNote(const Note& note);
 	bool removeNote(int id);
-	void editNote(int id,const std::tm& newDate,const std::string& newText);
+	void editNote(int id,const std::tm& newDate,NoteType newType,const std::string& newText);
 	std::vector<Note> getUpcomingNotes() const;
 	bool isPast(const std::tm& date) const;
+	std::vector<Note> getAllExams() const;
 };
