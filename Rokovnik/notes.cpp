@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "notes.h"
 #include <fstream>
 #include <string>
@@ -6,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <ctime>
 void Notes::addNote(const Note& note) {
 	Note n = note;
 	n.id = generateId();
@@ -104,4 +106,24 @@ void Notes::editNote(int id, const std::tm& newDate, const std::string& newText)
 		}
 	}
 	throw std::out_of_range("Beleska ne postoji");
+}
+
+std::vector<Note> Notes::getUpcomingNotes() const {
+	std::vector<Note> res;
+	for (const Note& n : notes) {
+		if (!isPast(n.date))
+			res.push_back(n);
+	}
+	return res;
+}
+
+bool Notes::isPast(const std::tm& date) const{
+	std::time_t timestamp = time(nullptr);
+	std::tm today = *localtime(&timestamp);
+	if (date.tm_year != today.tm_year)
+		return date.tm_year < today.tm_year;
+	if (date.tm_mon != today.tm_mon)
+		return date.tm_mon < today.tm_mon;
+	return date.tm_mday < today.tm_mday;
+
 }

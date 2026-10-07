@@ -16,7 +16,6 @@ const string filename="beleske.txt";
 void listNotes(const vector<Note>& notes);
 bool parseDate(const string& s, tm& out);
 int readInt();
-bool isPast(const tm& date);
 vector<Note> sortedByDate(const vector<Note>& notes);
 int daysUntil(const tm& date);
 void formatDaysUntil(string& str, const tm& date);
@@ -62,14 +61,13 @@ int main() {
 				cin.get();
 				break;
 			}
-			if (isPast(date)) {
+			if (n.isPast(date)) {
 				cout << "\nDatum je u proslosti, pritisnite enter: ";
 				cin.ignore();
 				cin.get();
 				break;
 			}
 			cout << "\nUnesite belesku: ";
-			cin.ignore();
 			newNote.date = date;
 			getline(cin, newNote.text);
 			n.addNote(newNote);
@@ -79,7 +77,7 @@ int main() {
 		}
 		case 2: {
 			system("cls");
-			vector<Note> notes = n.getAllNotes();
+			vector<Note> notes = n.getUpcomingNotes();
 			if (notes.empty()) {
 				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
 				cin.ignore();
@@ -105,6 +103,12 @@ int main() {
 				cin.get();
 				break;
 			}
+			if (n.isPast(date)) {
+				cout << "\nDatum je u proslosti, pritisnite enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
 			vector<Note> critNotes = n.getAllNotesForDate(date);
 			if (critNotes.empty()) {
 				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
@@ -120,7 +124,7 @@ int main() {
 		}
 		case 4: {
 			system("cls");
-			vector<Note> notes = n.getAllNotes();
+			vector<Note> notes = n.getUpcomingNotes();
 			if (notes.empty()) {
 				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
 				cin.ignore();
@@ -152,7 +156,7 @@ int main() {
 		}
 		case 5: {
 			system("cls");
-			listNotes(n.getAllNotes());
+			listNotes(n.getUpcomingNotes());
 			cout << "\nUnesite id da bi izabrali belesku za izmenu(ili 0 za povratak): ";
 			string idStr;
 			int id;
@@ -178,7 +182,7 @@ int main() {
 				cin.get();
 				break;
 			}
-			if (isPast(newDate)) {
+			if (n.isPast(newDate)) {
 				cout << "\nDatum je u proslosti, pritisnite enter: ";
 				cin.ignore();
 				cin.get();
@@ -260,16 +264,7 @@ void formatDaysUntil(string& str,const tm& date) {
 	}
 }
 
-bool isPast(const tm& date) {
-	time_t timestamp = time(nullptr);
-	tm today = *localtime(&timestamp);
-	if (date.tm_year != today.tm_year)
-		return date.tm_year < today.tm_year;
-	if (date.tm_mon != today.tm_mon)
-		return date.tm_mon < today.tm_mon;
-	return date.tm_mday < today.tm_mday;
-	
-}
+
 void listNotes(const vector<Note>& notes) {
 	cout << "\n===== Lista beleski =====\n";
 	vector<Note> copy = sortedByDate(notes);
