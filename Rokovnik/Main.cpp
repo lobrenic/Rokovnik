@@ -33,6 +33,7 @@ int main() {
 		cout << "4. Obrisi belesku po id\n";
 		cout << "5. Izmeni belesku\n";
 		cout << "6. Prikazi sve ispite\n";
+		cout << "7. Pretrazi beleske po tekstu\n";
 		cout << "0. Izlaz\n";
 		cout << "====================\n";
 		cout << "Vas izbor: ";
@@ -246,7 +247,27 @@ int main() {
 			cin.get();
 			break;
 		}
-			
+		case 7: {
+			system("cls");
+			cin.ignore();
+			string query;
+			cout << "\nUnesite tekst: ";
+			getline(cin, query);
+			if (query.empty()) break;
+			vector<Note> match;
+			n.searchByText(query, match);
+			if (match.empty()) {
+				cout << "\nNema beleski sa tim tekstom, pritisnite enter za povratak: ";
+				cin.get();
+				break;
+			}
+			listNotes(match);
+			cout << "\nPritisnite enter za povratak: ";
+			cin.ignore();
+			cin.get();
+			break;
+		}
+
 		default:
 			break;
 		}

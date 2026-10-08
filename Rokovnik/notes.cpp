@@ -1,5 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "notes.h"
+#include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <string>
 #include <iomanip>
@@ -141,4 +143,24 @@ std::vector<Note> Notes::getAllExams() const {
 			exams.push_back(n);
 	}
 	return exams;
+}
+
+void Notes::searchByText(const std::string& query, std::vector<Note>& list) const {
+	std::string queryCopy = query;
+	toLower(queryCopy);
+	list.clear();
+	for (const Note& note : notes) {
+		std::string textCopy=note.text;
+		toLower(textCopy);
+		if (textCopy.find(queryCopy) != std::string::npos)
+			list.push_back(note);
+
+	}
+	
+}
+
+void Notes::toLower(std::string& s)const {
+	std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+		return std::tolower(c);
+	});
 }

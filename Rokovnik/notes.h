@@ -19,6 +19,7 @@ private:
 	void load();
 	void save() const;
 	int generateId() const;
+	void toLower(std::string& s)const;
 public:
 	Notes(const std::string& filename);
 	const std::vector<Note>& getAllNotes() const;
@@ -29,4 +30,5 @@ public:
 	std::vector<Note> getUpcomingNotes() const;
 	bool isPast(const std::tm& date) const;
 	std::vector<Note> getAllExams() const;
+	void searchByText(const std::string& query, std::vector<Note>& list) const;
 };
