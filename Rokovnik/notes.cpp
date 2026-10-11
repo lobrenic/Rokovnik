@@ -1,127 +1,195 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "notes.h"
-#include <algorithm>
-#include <cctype>
-#include <fstream>
 #include <string>
 #include <iomanip>
 #include <vector>
-#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <ctime>
+#include <jdbc/cppconn/connection.h>
+#include<jdbc/cppconn/prepared_statement.h>
+#include <jdbc/cppconn/statement.h>
+#include <jdbc/cppconn/resultset.h>
+#include <jdbc/cppconn/exception.h>
+#include <memory>
+namespace {
+	const char* SELECT_NOTES =
+		"SELECT n.id, n.note_date, n.text, "
+		"e.subject, e.room, e.start_time, e.duration_min "
+		"FROM note n LEFT JOIN exam e ON e.note_id = n.id ";
+}
 void Notes::addNote(const Note& note) {
-	Note n = note;
-	n.id = generateId();
-	notes.push_back(n);
-	save();
-}
-
-int Notes::generateId() const{
-	int maxId = 0;
-	for (const Note& n : notes) {
-		if (n.id > maxId)
-			maxId = n.id;
-
+	sql::Connection& con = db.connection();
+	try {
+		con.setAutoCommit(false);
+		{
+			std::unique_ptr<sql::PreparedStatement> ps(
+				con.prepareStatement("INSERT INTO note (note_date, text) VALUES (?, ?)"));
+			ps->setString(1, dateToSql(note.date));
+			ps->setString(2, note.text);
+			ps->executeUpdate();
+		}
+		if (note.exam) {
+			int newId = 0;
+			{
+				std::unique_ptr<sql::Statement> st(con.createStatement());
+				std::unique_ptr<sql::ResultSet> rs(st->executeQuery("SELECT LAST_INSERT_ID()"));
+				if (rs->next())
+					newId = rs->getInt(1);
+			}
+			const ExamInfo& e = *note.exam;
+			
+			std::unique_ptr<sql::PreparedStatement> ps(
+				con.prepareStatement(
+					"INSERT INTO exam (note_id, subject, room, start_time, duration_min) "
+					"VALUES (?, ?, ?, ?, ?)"));
+			ps->setInt(1, newId);
+			ps->setString(2, e.subject);
+			ps->setString(3, e.room);
+			ps->setString(4, timeToSql(e.hour, e.minute));
+			ps->setInt(5, e.durationMin);
+			ps->executeUpdate();
+		}
+		con.commit();
+		con.setAutoCommit(true);
 	}
-	return maxId + 1;
-}
-
-void Notes::save()const {
-	std::ofstream File(filename);
-	for (const Note& n : notes) {
-		File << n.id << '$' <<
-			std::put_time(&n.date,"%d.%m.%Y") << '$' <<typeToChar(n.type)<<'$'<<
-			n.text << std::endl;
-
-	}
-	File.close();
-}
-
-Notes::Notes(const std::string& filename) : filename(filename) {
-	load();
-}
-
-void Notes::load() {
-	notes.clear();
-	std::ifstream File(filename);
-	std::string line;
-	while (std::getline(File, line)) {
-		Note newNote{};
-		auto p1 = line.find('$');
-		auto p2 = line.find('$', p1 + 1);
-		auto p3 = line.find('$', p2 + 1);
-		if (p1 == std::string::npos || p2 == std::string::npos ||p3==std::string::npos)continue;
-		
+	catch (const sql::SQLException& ex) {
 		try {
-			newNote.id = std::stoi(line.substr(0, p1));
-		}
-		catch (...) {
-			continue;
-		}
-
-		
-		std::string dateStr= line.substr(p1 + 1, p2 - p1-1);
-		std::string typeStr = line.substr(p2 + 1, p3 - p2 - 1);
-		if (!typeStr.empty())
-			newNote.type = charToType(typeStr[0]);
-		newNote.text = line.substr(p3+1);
-		std::istringstream ss(dateStr);
-		ss >> std::get_time(&newNote.date, "%d.%m.%Y");
-		if (ss.fail()) continue;
-		notes.push_back(newNote);
+			con.rollback();
+			con.setAutoCommit(true);
+		}catch(...){}
+		throw std::runtime_error(std::string("Greska pri dodavanju beleske: ") + ex.what());
 	}
-
-
 }
 
-const std::vector<Note>& Notes::getAllNotes() const {
-	return notes;
+Notes::Notes(Database& db) : db(db) {}
+
+
+
+std::vector<Note> Notes::getAllNotes() const {
+	std::vector<Note> result;
+	try {
+		sql::Connection& con = db.connection();
+		std::unique_ptr<sql::PreparedStatement> ps(
+			con.prepareStatement(std::string(SELECT_NOTES) + "ORDER BY n.note_date, n.id"));
+		std::unique_ptr <sql::ResultSet> rs(ps->executeQuery());
+		while (rs->next())
+			result.push_back(rowToNote(*rs));
+
+	}
+	catch (const sql::SQLException& e) {
+		throw std::runtime_error(std::string("Greska pri citanju beleski: ") + e.what());
+	}
+	return result;
 }
 
 std::vector<Note> Notes::getAllNotesForDate(const std::tm& date) const {
-	std::vector<Note> noteV;
-	for (const Note& n : notes) {
-		if (n.date.tm_year == date.tm_year &&
-			n.date.tm_mday == date.tm_mday &&
-			n.date.tm_mon == date.tm_mon) {
-			noteV.push_back(n);
-		}
+	std::vector<Note> result;
+	try {
+		sql::Connection& con = db.connection();
+		std::unique_ptr<sql::PreparedStatement> ps(
+			con.prepareStatement(std::string(SELECT_NOTES) +
+				"WHERE n.note_date=? ORDER BY n.id")
+		);
+		ps->setString(1, dateToSql(date));
+		std::unique_ptr<sql::ResultSet> rs(ps->executeQuery());
+		while (rs->next())
+			result.push_back(rowToNote(*rs));
 	}
-	return noteV;
-	
+	catch (const sql::SQLException& e) {
+		throw std::runtime_error(std::string("Greska pri citanju beleski: ") + e.what());
+	}
+	return result;
 }
 bool Notes::removeNote(int id) {
-	for (auto it = notes.begin(); it != notes.end(); it++) {
-		if (it->id == id) {
-			notes.erase(it);
-			save();
-			return true;
-		}
+	try {
+		sql::Connection& con = db.connection();
+		std::unique_ptr<sql::PreparedStatement> ps(
+			con.prepareStatement("DELETE FROM note WHERE id=?"));
+		ps->setInt(1, id);
+		int affected = ps->executeUpdate();
+		return affected > 0;
 	}
-	return false;
+	catch (const sql::SQLException& e) {
+		throw std::runtime_error(std::string("Greska pri brisanju beleske: ") + e.what());
+	}
 }
-void Notes::editNote(int id, const std::tm& newDate,NoteType newType,const std::string& newText) {
+void Notes::editNote(int id, const std::tm& newDate,const std::optional<ExamInfo>& newExam,const std::string& newText) {
 	
-	for (Note& n : notes) {
-		if (n.id == id) {
-			n.text = newText;
-			n.date = newDate;
-			n.type = newType;
-			save();
-			return;
+		sql::Connection& con = db.connection();
+		try {
+			con.setAutoCommit(false);
+			bool exists = false;
+			{
+				std::unique_ptr<sql::PreparedStatement> ps(
+					con.prepareStatement("SELECT id FROM note WHERE id=? FOR UPDATE"));
+				ps->setInt(1, id);
+				std::unique_ptr<sql::ResultSet> rs(ps->executeQuery());
+				exists = rs->next();
+			}
+			if (!exists) {
+				con.rollback();
+				con.setAutoCommit(true);
+				throw std::out_of_range("Beleska ne postoji");
+			}
+			{
+				std::unique_ptr<sql::PreparedStatement> ps(
+					con.prepareStatement("UPDATE note SET note_date=?, text=? WHERE id=?"));
+				ps->setString(1, dateToSql(newDate));
+				ps->setString(2, newText);
+				ps->setInt(3, id);
+				ps->executeUpdate();
+			}
+			if (newExam) {
+				const ExamInfo& e = *newExam;
+				std::unique_ptr<sql::PreparedStatement> ps(
+					con.prepareStatement(
+						"INSERT INTO exam (note_id, subject, room, start_time, duration_min) "
+						"VALUES (?, ?, ?, ?, ?) "
+						"ON DUPLICATE KEY UPDATE subject=VALUES(subject), room = VALUES(room), "
+						"start_time = VALUES(start_time), duration_min = VALUES(duration_min)"));
+				ps->setInt(1, id);
+				ps->setString(2, e.subject);
+				ps->setString(3, e.room);
+				ps->setString(4, timeToSql(e.hour, e.minute));
+				ps->setInt(5, e.durationMin);
+				ps->executeUpdate();
+			}
+			else {
+				std::unique_ptr<sql::PreparedStatement> ps(
+					con.prepareStatement("DELETE FROM exam WHERE note_id=?"));
+				ps->setInt(1, id);
+				ps->executeUpdate();
+			}
+			con.commit();
+			con.setAutoCommit(true);
 		}
-	}
-	throw std::out_of_range("Beleska ne postoji");
+		catch (const sql::SQLException& ex) {
+			try {
+				con.rollback();
+				con.setAutoCommit(true);
+			}
+			catch (...) {}
+			throw std::runtime_error(std::string("Greska pri izmeni beleske: ") + ex.what());
+		}
+	
 }
 
 std::vector<Note> Notes::getUpcomingNotes() const {
-	std::vector<Note> res;
-	for (const Note& n : notes) {
-		if (!isPast(n.date))
-			res.push_back(n);
+	std::vector<Note> result;
+	try {
+		sql::Connection& con = db.connection();
+		std::unique_ptr<sql::PreparedStatement> ps(
+			con.prepareStatement(std::string(SELECT_NOTES)
+				+ "WHERE n.note_date >= CURDATE() ORDER BY n.note_date, n.id"));
+		std::unique_ptr<sql::ResultSet> rs(ps->executeQuery());
+		while (rs->next())
+			result.push_back(rowToNote(*rs));
 	}
-	return res;
+	catch (const sql::SQLException& e) {
+		throw std::runtime_error(std::string("Greska pri citanju beleski: ") + e.what());
+	}
+	return result;
 }
 
 bool Notes::isPast(const std::tm& date) const{
@@ -136,31 +204,89 @@ bool Notes::isPast(const std::tm& date) const{
 }
 
 std::vector<Note> Notes::getAllExams() const {
-	std::vector<Note> temp=getUpcomingNotes();
-	std::vector<Note> exams;
-	for (const Note& n : temp) {
-		if (n.type == NoteType::Exam)
-			exams.push_back(n);
+	std::vector<Note> result;
+	try {
+		sql::Connection& con = db.connection();
+		std::unique_ptr<sql::PreparedStatement> ps(
+			con.prepareStatement(std::string(SELECT_NOTES) +
+				"WHERE e.note_id IS NOT NULL AND n.note_date >= CURDATE() "
+				"ORDER BY n.note_date, e.start_time")
+		);
+		std::unique_ptr<sql::ResultSet> rs(ps->executeQuery());
+		while (rs->next())
+			result.push_back(rowToNote(*rs));
 	}
-	return exams;
+	catch (const sql::SQLException& e) {
+		throw std::runtime_error(std::string("Greska pri citanju ispita: ") + e.what());
+	}
+	return result;
 }
 
-void Notes::searchByText(const std::string& query, std::vector<Note>& list) const {
-	std::string queryCopy = query;
-	toLower(queryCopy);
-	list.clear();
-	for (const Note& note : notes) {
-		std::string textCopy=note.text;
-		toLower(textCopy);
-		if (textCopy.find(queryCopy) != std::string::npos)
-			list.push_back(note);
-
+std::vector<Note> Notes::searchByText(const std::string& query) const {
+	std::vector<Note> result;
+	std::string escaped;
+	for (char c : query) {
+		if (c == '\\' || c == '%' || c == '_')
+			escaped += '\\';
+		escaped += c;
 	}
-	
+	try {
+		sql::Connection& con = db.connection();
+		std::unique_ptr<sql::PreparedStatement> ps(
+			con.prepareStatement(std::string(SELECT_NOTES) +
+				"WHERE n.text LIKE ? ORDER BY n.note_date, n.id")
+		);
+		ps->setString(1, "%" + escaped + "%");
+		std::unique_ptr<sql::ResultSet> rs(ps->executeQuery());
+		while (rs->next())
+			result.push_back(rowToNote(*rs));
+	}
+	catch (const sql::SQLException& e) {
+		throw std::runtime_error(std::string("Greska pri pretrazi: ") + e.what());
+	}
+	return result;
 }
 
-void Notes::toLower(std::string& s)const {
-	std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
-		return std::tolower(c);
-	});
+
+
+std::string Notes::dateToSql(const std::tm& date) {
+	std::ostringstream ss;
+	ss << std::put_time(&date, "%Y-%m-%d");
+	return ss.str();
+}
+
+std::tm Notes::sqlToDate(const std::string& s) {
+	std::tm date{};
+	std::istringstream ss(s);
+	ss >> std::get_time(&date, "%Y-%m-%d");
+	if (ss.fail())
+		throw std::runtime_error("Neispravan datum iz baze: " + s);
+	return date;
+}
+
+Note Notes::rowToNote(sql::ResultSet& rs) {
+	Note n;
+	n.id = rs.getInt("id");
+	n.date = sqlToDate(rs.getString("note_date"));
+	n.text = rs.getString("text");
+
+	if (!rs.isNull("subject")) {
+		ExamInfo e;
+		e.subject = rs.getString("subject");
+		if (!rs.isNull("room"))
+			e.room = rs.getString("room");
+		std::string t = rs.getString("start_time");
+		e.hour = std::stoi(t.substr(0,2));
+		e.minute = std::stoi(t.substr(3, 2));
+		e.durationMin = rs.getInt("duration_min");
+
+		n.exam = e;
+	}
+	return n;
+}
+
+std::string Notes::timeToSql(int hour, int minute) {
+	std::ostringstream t;
+	t << std::setfill('0') << std::setw(2) << hour << ":" << std::setw(2) << minute << ":00";
+	return t.str();
 }

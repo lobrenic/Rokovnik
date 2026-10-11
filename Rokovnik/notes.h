@@ -2,33 +2,44 @@
 #include <ctime>
 #include <string>
 #include <vector>
-#include "noteType.h"
+#include <optional>
+#include "database.h"
+
+namespace sql {
+	class ResultSet;
+}
+struct ExamInfo {
+	std::string subject;
+	std::string room;
+	int hour = 0;
+	int minute = 0;
+	int durationMin = 90;
+};
 
 struct Note {
 	int id=-1;
 	std::tm date{};
 	std::string text;
-	NoteType type = NoteType::Note;
+	std::optional<ExamInfo> exam;
 };
 
 class Notes {
 private:
-	std::vector<Note> notes;
-	std::string filename;
+	Database& db;
 
-	void load();
-	void save() const;
-	int generateId() const;
-	void toLower(std::string& s)const;
+	static std::string dateToSql(const std::tm& date);
+	static std::tm sqlToDate(const std::string& s);
+	static Note rowToNote(sql::ResultSet& rs);
+	static std::string timeToSql(int hour, int minute);
 public:
-	Notes(const std::string& filename);
-	const std::vector<Note>& getAllNotes() const;
+	explicit Notes(Database& db);
+	std::vector<Note> getAllNotes() const;
 	std::vector<Note> getAllNotesForDate(const std::tm& date) const;
 	void addNote(const Note& note);
 	bool removeNote(int id);
-	void editNote(int id,const std::tm& newDate,NoteType newType,const std::string& newText);
+	void editNote(int id,const std::tm& newDate,const std::optional<ExamInfo>& newExam,const std::string& newText);
 	std::vector<Note> getUpcomingNotes() const;
 	bool isPast(const std::tm& date) const;
 	std::vector<Note> getAllExams() const;
-	void searchByText(const std::string& query, std::vector<Note>& list) const;
+	std::vector<Note> searchByText(const std::string& query) const;
 };

@@ -10,20 +10,44 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cmath>
+#include <optional>
+#include "database.h"
 using namespace std;
 
-const string filename="beleske.txt";
 
 void listNotes(const vector<Note>& notes);
+
 bool parseDate(const string& s, tm& out);
+
 int readInt();
+
 vector<Note> sortedByDate(const vector<Note>& notes);
+
 int daysUntil(const tm& date);
+
 void formatDaysUntil(string& str, const tm& date);
+
+void run(Notes& n);
+
+bool readExamInfo(ExamInfo& e);
+
 int main() {
-	Notes n(filename);
+
+	try {
+		Database db("127.0.0.1", "rokovnik_app", "", "rokovnik");
+		db.open();
+		Notes n(db);
+		run(n);
+	}
+	catch (const exception& e) {
+		cout << "Greska: " << e.what() << "\n";
+		cin.get();
+	}
+}
+
+void run(Notes& n) {
 	int choice;
-	
+
 	do {
 		system("cls");
 		cout << "\n===== ROKOVNIK =====\n";
@@ -41,239 +65,308 @@ int main() {
 			choice = readInt();
 		}
 		catch (const exception&) {
-			choice = -1;   
+			choice = -1;
 		}
-		switch (choice)
-		{
-		case 1: {
-			Note newNote;
-			string dateStr;
-			system("cls");
-			cin.ignore();
-			cout << "\nUnesite datum u formatu dd.mm.YYYY: ";
-			cin >> dateStr;
-			tm date{};
-			if (!parseDate(dateStr, date)) {
-				cout << "\nNeispravan datum, pritisnite enter: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			if (n.isPast(date)) {
-				cout << "\nDatum je u proslosti, pritisnite enter: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			cout << "\nDa li je ispit? (d/n): ";
-			char isExam;
-			cin >> isExam;
-			if (isExam != 'd' && isExam != 'n') {
-				cout << "\nNeispravan unos, pritisnite enter za povratak na meni: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			if (isExam == 'd')
-				newNote.type = NoteType::Exam;
-			cin.ignore();
-			cout << "\nUnesite belesku: ";
-			newNote.date = date;
-			getline(cin, newNote.text);
-			n.addNote(newNote);
-			cout << "\nBeleska uspesno dodata, pritisnite enter: ";
-			cin.get();
-			break;
-		}
-		case 2: {
-			system("cls");
-			vector<Note> notes = n.getUpcomingNotes();
-			if (notes.empty()) {
-				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}	
-			listNotes(notes);
-			cout << "Press enter: ";
-			cin.ignore();
-			cin.get();
-			break;
-		}
-		case 3: {
-			system("cls");
-			string critDate;
-			cout << "\nUnesite datum u formatu dd.mm.YYYY: ";
-			cin >> critDate;
-			
-			tm date{};
-			if (!parseDate(critDate, date)) {
-				cout << "\nNeispravan datum, pritisnite enter: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			if (n.isPast(date)) {
-				cout << "\nDatum je u proslosti, pritisnite enter: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			vector<Note> critNotes = n.getAllNotesForDate(date);
-			if (critNotes.empty()) {
-				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			listNotes(critNotes);
-			cout << "Press enter: ";
-			cin.ignore();
-			cin.get();
-			break;
-		}
-		case 4: {
-			system("cls");
-			vector<Note> notes = n.getAllNotes();
-			if (notes.empty()) {
-				cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			listNotes(notes);
-			cout << "\nUnesite id beleske koju zelite da izbrisete: ";
-			int id;
-			try {
-				id = readInt();
-			}
-			catch (const exception&) {
-				cout << "\nNiste uneli broj, pritisnite enter da se vratite u meni: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			if (id == 0) break;
-			bool uspeh = n.removeNote(id);
-			if (uspeh) 
-				cout << "\nUspesno je uklonjena beleska, pritisnite enter da se vratite u meni: ";
-			else
-				cout << "\nDoslo je do greske, pritisnite enter da se vratite u meni: ";
-			cin.ignore();
-			cin.get();
-			break;
-		}
-		case 5: {
-			system("cls");
-			vector<Note> notes = n.getAllNotes();
-			if (notes.empty()) {
-				cout << "\nNema beleski";
-				cout << "\nPress enter: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			listNotes(notes);
-			cout << "\nUnesite id da bi izabrali belesku za izmenu(ili 0 za povratak): ";
-			int id;
-			try {
-				id = readInt();
-			}
-			catch (const exception&) {
-				cout << "\nNiste uneli broj, pritisnite enter da se vratite u meni: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			if (id == 0) break;
-			
-			string newText;
-			string newDateStr;
-			tm newDate{};
-			cout << "\nUnesite novi datum u formatu dd.mm.YYYY: ";
-			cin >> newDateStr;
-			if (!parseDate(newDateStr, newDate)) {
-				cout << "\nNeispravan datum, pritisnite enter: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			if (n.isPast(newDate)) {
-				cout << "\nDatum je u proslosti, pritisnite enter: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			cout << "\nDa li je ispit? (d/n): ";
-			char isExam;
-			NoteType type=NoteType::Note;
-			cin >> isExam;
-			if (isExam != 'd' && isExam != 'n') {
-				cout << "\nNeispravan unos, pritisnite enter za povratak na meni: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			if (isExam == 'd')type = NoteType::Exam;
-			
-			cout << "\nUnesite novi tekst: ";
-			cin.ignore();
-			getline(cin,newText);
-			
-			try {
-				n.editNote(id, newDate, type,newText);
-				cout << "\nBeleska uspesno izmenjena, pritisnite enter: ";
-			}
-			catch (const exception& e) {
-				cout << "\nGreska, " << e.what() << ", pritisnite enter: ";
-			}
-			
-			cin.get();
-			break;
-		}
-		case 6: {
-			system("cls");
-			vector<Note> exams = n.getAllExams();
-			if (exams.empty()) {
-				cout << "\nNema predstojecih ispita";
-				cout << "\nPress enter: ";
-				cin.ignore();
-				cin.get();
-				break;
-			}
-			listNotes(exams);
-			cout << "Press enter: ";
-			cin.ignore();
-			cin.get();
-			break;
-		}
-		case 7: {
-			system("cls");
-			cin.ignore();
-			string query;
-			cout << "\nUnesite tekst: ";
-			getline(cin, query);
-			if (query.empty()) break;
-			vector<Note> match;
-			n.searchByText(query, match);
-			if (match.empty()) {
-				cout << "\nNema beleski sa tim tekstom, pritisnite enter za povratak: ";
-				cin.get();
-				break;
-			}
-			listNotes(match);
-			cout << "\nPritisnite enter za povratak: ";
-			cin.ignore();
-			cin.get();
-			break;
-		}
+		try {
 
-		default:
-			break;
+			switch (choice)
+			{
+			case 1: {
+				Note newNote;
+				string dateStr;
+				system("cls");
+				cin.ignore();
+				cout << "\nUnesite datum u formatu dd.mm.YYYY: ";
+				cin >> dateStr;
+				tm date{};
+				if (!parseDate(dateStr, date)) {
+					cout << "\nNeispravan datum, pritisnite enter: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				if (n.isPast(date)) {
+					cout << "\nDatum je u proslosti, pritisnite enter: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				cout << "\nDa li je ispit? (d/n): ";
+				char isExam;
+				cin >> isExam;
+				if (isExam != 'd' && isExam != 'n') {
+					cout << "\nNeispravan unos, pritisnite enter za povratak na meni: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				cin.ignore();
+				if (isExam == 'd') {
+					ExamInfo info;
+					if (!readExamInfo(info)) {
+						cout << "\nNeispravan unos ispita, pritisnite enter: ";
+						cin.ignore();
+						cin.get();
+						break;
+					}
+					newNote.exam = info;
+
+				}
+
+
+				cout << "\nUnesite belesku: ";
+				newNote.date = date;
+				getline(cin, newNote.text);
+				try {
+					n.addNote(newNote);
+					cout << "\nBeleska uspesno dodata, pritisnite enter: ";
+				}
+				catch (const exception& e) {
+					cout << "\nGreska: " << e.what() << ", pritisnite enter: ";
+				}
+
+				cin.get();
+				break;
+			}
+			case 2: {
+				system("cls");
+				vector<Note> notes = n.getUpcomingNotes();
+				if (notes.empty()) {
+					cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				listNotes(notes);
+				cout << "Press enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			case 3: {
+				system("cls");
+				string critDate;
+				cout << "\nUnesite datum u formatu dd.mm.YYYY: ";
+				cin >> critDate;
+
+				tm date{};
+				if (!parseDate(critDate, date)) {
+					cout << "\nNeispravan datum, pritisnite enter: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				if (n.isPast(date)) {
+					cout << "\nDatum je u proslosti, pritisnite enter: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				vector<Note> critNotes = n.getAllNotesForDate(date);
+				if (critNotes.empty()) {
+					cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				listNotes(critNotes);
+				cout << "Press enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			case 4: {
+				system("cls");
+				vector<Note> notes = n.getAllNotes();
+				if (notes.empty()) {
+					cout << "\nNema beleski za dati kriterijum, pritisnite enter da se vratite u meni: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				listNotes(notes);
+				cout << "\nUnesite id beleske koju zelite da izbrisete: ";
+				int id;
+				try {
+					id = readInt();
+				}
+				catch (const exception&) {
+					cout << "\nNiste uneli broj, pritisnite enter da se vratite u meni: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				if (id == 0) break;
+				try {
+					bool uspeh = n.removeNote(id);
+					if (uspeh)
+						cout << "\nUspesno je uklonjena beleska, pritisnite enter da se vratite u meni: ";
+					else
+						cout << "\nDoslo je do greske, pritisnite enter da se vratite u meni: ";
+				}
+				catch (const exception& e) {
+					cout << "\nGreska: " << e.what() << ", pritisnite enter: ";
+				}
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			case 5: {
+				system("cls");
+				vector<Note> notes = n.getAllNotes();
+				if (notes.empty()) {
+					cout << "\nNema beleski";
+					cout << "\nPress enter: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				listNotes(notes);
+				cout << "\nUnesite id da bi izabrali belesku za izmenu(ili 0 za povratak): ";
+				int id;
+				try {
+					id = readInt();
+				}
+				catch (const exception&) {
+					cout << "\nNiste uneli broj, pritisnite enter da se vratite u meni: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				if (id == 0) break;
+
+				string newText;
+				string newDateStr;
+				tm newDate{};
+				cout << "\nUnesite novi datum u formatu dd.mm.YYYY: ";
+				cin >> newDateStr;
+				if (!parseDate(newDateStr, newDate)) {
+					cout << "\nNeispravan datum, pritisnite enter: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				if (n.isPast(newDate)) {
+					cout << "\nDatum je u proslosti, pritisnite enter: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				cout << "\nDa li je ispit? (d/n): ";
+				char isExam;
+				optional<ExamInfo> newExam;
+				cin >> isExam;
+				
+				if (isExam != 'd' && isExam != 'n') {
+					cout << "\nNeispravan unos, pritisnite enter za povratak na meni: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				cin.ignore();
+				if (isExam == 'd') {
+					ExamInfo info;
+					if (!readExamInfo(info)) {
+						cout << "\nNeispravan unos, pritisnite enter za povratak na meni: ";
+						cin.ignore();
+						cin.get();
+						break;
+					}
+					newExam = info;
+				}
+
+				cout << "\nUnesite novi tekst: ";
+				getline(cin, newText);
+
+				try {
+					n.editNote(id, newDate, newExam, newText);
+					cout << "\nBeleska uspesno izmenjena, pritisnite enter: ";
+				}
+				catch (const exception& e) {
+					cout << "\nGreska, " << e.what() << ", pritisnite enter: ";
+				}
+
+				cin.get();
+				break;
+			}
+			case 6: {
+				system("cls");
+				vector<Note> exams = n.getAllExams();
+				if (exams.empty()) {
+					cout << "\nNema predstojecih ispita";
+					cout << "\nPress enter: ";
+					cin.ignore();
+					cin.get();
+					break;
+				}
+				listNotes(exams);
+				cout << "Press enter: ";
+				cin.ignore();
+				cin.get();
+				break;
+			}
+			case 7: {
+				system("cls");
+				cin.ignore();
+				string query;
+				cout << "\nUnesite tekst: ";
+				getline(cin, query);
+				if (query.empty()) break;
+				vector<Note> match= n.searchByText(query);
+				
+				if (match.empty()) {
+					cout << "\nNema beleski sa tim tekstom, pritisnite enter za povratak: ";
+					cin.get();
+					break;
+				}
+				listNotes(match);
+				cout << "\nPritisnite enter za povratak: ";
+				cin.get();
+				break;
+			}
+
+			default:
+				break;
+			}
 		}
-	} while (choice!=0);
-	
+		catch (const exception& e) {
+			cout << "\nGreska: " << e.what() << ", pritisnite enter: ";
+			cin.ignore();
+			cin.get();
+		}
+	} while (choice != 0);
 }
+
+bool readExamInfo(ExamInfo& e) {
+	cout << "\nPredmet: ";
+	getline(cin, e.subject);
+	if (e.subject.empty())
+		return false;
+	cout << "\nSala (moze prazno): ";
+	getline(cin, e.room);
+	cout << "\nVreme pocetka (HH:MM): ";
+	string timeStr;
+	cin >> timeStr;
+	tm t{};
+	istringstream ss(timeStr);
+	ss >> get_time(&t, "%H:%M");
+	if (ss.fail())
+		return false;
+	e.hour = t.tm_hour;
+	e.minute = t.tm_min;
+
+	cout << "\nTrajanje u minutima: ";
+	try {
+		e.durationMin = readInt();
+	}
+	catch(const exception&){
+		return false;
+	}
+	if (e.durationMin <= 0 || e.durationMin > 600)return false;
+	cin.ignore();
+	return true;
+}
+
 int daysUntil(const tm& date) {
 	tm target = date;
 	target.tm_hour = 12;
@@ -334,11 +427,19 @@ void listNotes(const vector<Note>& notes) {
 	string until;
 	for (const Note& note : copy){
 		formatDaysUntil(until, note.date);
-		cout << '[' << note.id << "] " <<
-			note.text << "\t" <<
+		cout << '[' << note.id << "] " << "\t" <<
 			put_time(&note.date, "%d.%m.%Y") << "\t" <<
-			until << "\t" <<
-			"[" << typeToChar(note.type) << "]" << endl;
+			until << "\t" << note.text << endl;
+		if (note.exam) {
+			const ExamInfo& e = *note.exam;
+			cout << "      [ISPIT] " << e.subject;
+			if (!e.room.empty())
+				cout << ", sala " << e.room;
+			cout << ", " << setfill('0')
+				<< setw(2) << e.hour << ":"
+				<< setw(2) << e.minute << setfill(' ')
+				<< ", " << e.durationMin << " min" << endl;
+		}
 	}
 	cout << "\n=========================\n";
 }

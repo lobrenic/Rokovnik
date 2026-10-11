@@ -21,7 +21,7 @@
     <ClCompile Include="notes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="noteType.cpp">
+    <ClCompile Include="database.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -29,7 +29,7 @@
     <ClInclude Include="notes.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="noteType.h">
+    <ClInclude Include="database.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
