@@ -19,6 +19,8 @@ namespace {
 		"FROM note n LEFT JOIN exam e ON e.note_id = n.id ";
 }
 void Notes::addNote(const Note& note) {
+	if (isPast(note.date))
+		throw std::invalid_argument("Datum je u proslosti");
 	sql::Connection& con = db.connection();
 	try {
 		con.setAutoCommit(false);
@@ -115,7 +117,8 @@ bool Notes::removeNote(int id) {
 	}
 }
 void Notes::editNote(int id, const std::tm& newDate,const std::optional<ExamInfo>& newExam,const std::string& newText) {
-	
+		if (isPast(newDate))
+			throw std::invalid_argument("Datum je u proslosti");
 		sql::Connection& con = db.connection();
 		try {
 			con.setAutoCommit(false);

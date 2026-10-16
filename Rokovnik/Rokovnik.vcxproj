@@ -149,12 +149,18 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="database.cpp" />
+    <ClCompile Include="datetime.cpp" />
+    <ClCompile Include="input.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="notes.cpp" />
+    <ClCompile Include="ui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="database.h" />
+    <ClInclude Include="datetime.h" />
+    <ClInclude Include="input.h" />
     <ClInclude Include="notes.h" />
+    <ClInclude Include="ui.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

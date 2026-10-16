@@ -24,12 +24,30 @@
     <ClCompile Include="database.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="datetime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="input.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ui.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="notes.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="database.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="datetime.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="input.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ui.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
