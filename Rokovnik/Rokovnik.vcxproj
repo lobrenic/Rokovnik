@@ -153,14 +153,20 @@
     <ClCompile Include="input.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="notes.cpp" />
+    <ClCompile Include="notifier.cpp" />
+    <ClCompile Include="reminder.cpp" />
     <ClCompile Include="ui.cpp" />
+    <ClCompile Include="wintoastlib.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="database.h" />
     <ClInclude Include="datetime.h" />
     <ClInclude Include="input.h" />
     <ClInclude Include="notes.h" />
+    <ClInclude Include="notifier.h" />
+    <ClInclude Include="reminder.h" />
     <ClInclude Include="ui.h" />
+    <ClInclude Include="wintoastlib.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

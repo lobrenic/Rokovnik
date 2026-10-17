@@ -33,6 +33,15 @@
     <ClCompile Include="ui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="reminder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="wintoastlib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="notifier.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="notes.h">
@@ -48,6 +57,15 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ui.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="reminder.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wintoastlib.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="notifier.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

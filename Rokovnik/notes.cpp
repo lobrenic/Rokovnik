@@ -293,3 +293,25 @@ std::string Notes::timeToSql(int hour, int minute) {
 	t << std::setfill('0') << std::setw(2) << hour << ":" << std::setw(2) << minute << ":00";
 	return t.str();
 }
+
+std::vector<Note> Notes::getExamsWithin(int days)const {
+	std::vector<Note> result;
+	try {
+		sql::Connection& con = db.connection();
+		std::unique_ptr<sql::PreparedStatement> ps(con.prepareStatement(
+			std::string(SELECT_NOTES)
+			+ "WHERE e.note_id IS NOT NULL "
+			"AND n.note_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY) "
+			"ORDER BY n.note_date, e.start_time"
+		));
+		ps->setInt(1, days);
+		std::unique_ptr<sql::ResultSet> rs(ps->executeQuery());
+		while (rs->next())
+			result.push_back(rowToNote(*rs));
+	}
+	catch (const sql::SQLException& e) {
+		throw std::runtime_error(std::string("Greska pri citanju podsetnika: ") + e.what());
+	}
+	return result;
+
+}

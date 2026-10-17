@@ -42,4 +42,5 @@ public:
 	bool isPast(const std::tm& date) const;
 	std::vector<Note> getAllExams() const;
 	std::vector<Note> searchByText(const std::string& query) const;
+	std::vector<Note> getExamsWithin(int days)const;
 };
